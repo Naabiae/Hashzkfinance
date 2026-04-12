@@ -6,28 +6,30 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IVerifier.sol";
 
 /**
- * @title MerchantRegistry
+ * @title IdentityRegistry
  * @dev A ZKID KYC registry for the HashBazaar marketplace.
  * Users submit a Groth16 proof showing they know the secret to a valid KYC commitment.
- * Once verified, they are minted a non-transferable (soulbound) Merchant NFT with a specific tier.
- * The admin can revoke the NFT if the merchant violates rules.
+ * Once verified, they are minted a non-transferable (soulbound) Identity NFT with a specific role.
+ * Role 1: Merchant (Can create sell orders)
+ * Role 2: P2P Agent (Can accept sell orders)
+ * The admin can revoke the NFT if the user violates rules.
  */
-contract MerchantRegistry is ERC721, Ownable {
+contract IdentityRegistry is ERC721, Ownable {
     IVerifier public immutable verifier;
 
     mapping(uint256 => bool) public isNullifierUsed;
     mapping(uint256 => bool) public isValidCommitment;
     
-    // Mapping from tokenId to the merchant's KYC tier
-    mapping(uint256 => uint256) public merchantTier;
+    // Mapping from tokenId to the user's KYC role (1 = Merchant, 2 = Agent)
+    mapping(uint256 => uint256) public userRole;
 
     uint256 private _nextTokenId;
 
-    event MerchantVerified(address indexed merchant, uint256 indexed tokenId, uint256 nullifierHash, uint256 tier);
+    event IdentityVerified(address indexed user, uint256 indexed tokenId, uint256 nullifierHash, uint256 role);
     event CommitmentAdded(uint256 indexed commitment);
-    event MerchantRevoked(address indexed merchant, uint256 indexed tokenId);
+    event IdentityRevoked(address indexed user, uint256 indexed tokenId);
 
-    constructor(address _verifier) ERC721("HashKey Merchant ZKID", "HMZKID") Ownable(msg.sender) {
+    constructor(address _verifier) ERC721("HashKey ZK Identity", "HKZKID") Ownable(msg.sender) {
         verifier = IVerifier(_verifier);
     }
 
@@ -40,8 +42,8 @@ contract MerchantRegistry is ERC721, Ownable {
     }
 
     /**
-     * @dev Submit a ZK proof to verify KYC and mint a Merchant NFT with a specific tier.
-     * @param input Public inputs [nullifierHash, userTier, commitment]
+     * @dev Submit a ZK proof to verify KYC and mint an Identity NFT with a specific role.
+     * @param input Public inputs [nullifierHash, userRole, commitment]
      */
     function verifyAndMint(
         uint256[2] memory a,
@@ -51,10 +53,10 @@ contract MerchantRegistry is ERC721, Ownable {
     ) external {
         // In circom:
         // input[0] is nullifierHash
-        // input[1] is userTier
+        // input[1] is userRole (was tier)
         // input[2] is commitment (the public input)
         uint256 nullifierHash = input[0];
-        uint256 tier = input[1];
+        uint256 role = input[1];
         uint256 commitment = input[2];
 
         require(isValidCommitment[commitment], "Invalid or unknown KYC commitment");
@@ -66,37 +68,32 @@ contract MerchantRegistry is ERC721, Ownable {
         isNullifierUsed[nullifierHash] = true;
 
         uint256 tokenId = _nextTokenId++;
-        merchantTier[tokenId] = tier;
+        userRole[tokenId] = role;
         _mint(msg.sender, tokenId);
 
-        emit MerchantVerified(msg.sender, tokenId, nullifierHash, tier);
+        emit IdentityVerified(msg.sender, tokenId, nullifierHash, role);
     }
 
     /**
-     * @dev Revoke a merchant's NFT if they violate marketplace rules.
+     * @dev Revoke a user's NFT if they violate marketplace rules.
      */
-    function revokeMerchant(uint256 tokenId) external onlyOwner {
-        address merchant = ownerOf(tokenId);
+    function revokeIdentity(uint256 tokenId) external onlyOwner {
+        address user = ownerOf(tokenId);
         _burn(tokenId);
-        merchantTier[tokenId] = 0; // Reset tier
-        emit MerchantRevoked(merchant, tokenId);
+        userRole[tokenId] = 0; // Reset role
+        emit IdentityRevoked(user, tokenId);
     }
 
     /**
-     * @dev Returns the tier of a given merchant. Returns 0 if not verified.
+     * @dev Returns the role of a given user. Returns 0 if not verified.
      */
-    function getMerchantTier(address merchant) external view returns (uint256) {
-        // Since NFTs are soulbound, we can just iterate or assume 1 token per merchant.
-        // For simplicity in this hackathon scope, we'll check if they have a balance
-        // and find their token. (In production, use ERC721Enumerable or a mapping).
-        if (balanceOf(merchant) == 0) return 0;
+    function getUserRole(address user) external view returns (uint256) {
+        if (balanceOf(user) == 0) return 0;
         
-        // This is a naive way to find the token for a user if they only ever get one
-        // Note: For hackathon scope, we assume `_nextTokenId` is small enough.
         for (uint256 i = 0; i < _nextTokenId; i++) {
             try this.ownerOf(i) returns (address owner) {
-                if (owner == merchant) {
-                    return merchantTier[i];
+                if (owner == user) {
+                    return userRole[i];
                 }
             } catch {
                 continue;
