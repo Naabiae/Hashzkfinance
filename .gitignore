@@ -1,0 +1,24 @@
+node_modules/
+.env
+coverage
+coverage.json
+typechain/
+typechain-types/
+
+# Hardhat files
+cache/
+artifacts/
+
+# snarkJS / Circom generated files
+*.ptau
+*.zkey
+*.wtns
+*.sym
+*.r1cs
+*_js/
+circuits/kyc_js/
+circuits/kyc.r1cs
+circuits/kyc.sym
+
+# Ignore large downloaded binaries
+circom
