@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/workspace/contracts/MerchantRegistry.sol": {
-      "lastModificationDate": 1775998945187,
-      "contentHash": "1f34cb1b62c433a0589336f0982c76fc",
+      "lastModificationDate": 1775999673945,
+      "contentHash": "6393ff68b1d80654ef6bbfc9ef26bda1",
       "sourceName": "contracts/MerchantRegistry.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -42,8 +42,8 @@
       ]
     },
     "/workspace/contracts/interfaces/IVerifier.sol": {
-      "lastModificationDate": 1775998952367,
-      "contentHash": "b59a9f3c3f57e555b9b88e26f7058537",
+      "lastModificationDate": 1775999661595,
+      "contentHash": "40d999fe27ad2d3e978e514576cafdcf",
       "sourceName": "contracts/interfaces/IVerifier.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -687,8 +687,8 @@
       ]
     },
     "/workspace/contracts/Verifier.sol": {
-      "lastModificationDate": 1775999140526,
-      "contentHash": "48478654464ad2923ffaa991e5aabeb4",
+      "lastModificationDate": 1775999651485,
+      "contentHash": "a9ad1efb659b5730e587cae59a75c66a",
       "sourceName": "contracts/Verifier.sol",
       "solcConfig": {
         "version": "0.8.24",
