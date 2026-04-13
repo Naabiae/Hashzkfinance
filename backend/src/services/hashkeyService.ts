@@ -4,13 +4,32 @@ import * as path from 'path';
 import * as jose from 'jose';
 import axios from 'axios';
 import dotenv from 'dotenv';
+// A fallback manual canonicalizer in case the package has ESM/CommonJS issues
+function manualCanonicalize(obj: any): string | undefined {
+  if (obj === null || typeof obj !== 'object') {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    const arrStr = obj.map(item => manualCanonicalize(item) || 'null').join(',');
+    return `[${arrStr}]`;
+  }
+  const keys = Object.keys(obj).sort();
+  const keyValuePairs = keys.map(key => {
+    const val = manualCanonicalize(obj[key]);
+    if (val !== undefined) {
+      return `${JSON.stringify(key)}:${val}`;
+    }
+  }).filter(v => v !== undefined);
+  return `{${keyValuePairs.join(',')}}`;
+}
 
 dotenv.config();
 
 const APP_KEY = process.env.HASHKEY_APP_KEY || "DUMMY_APP_KEY";
 const APP_SECRET = process.env.HASHKEY_APP_SECRET || "DUMMY_APP_SECRET";
 const MERCHANT_NAME = process.env.MERCHANT_NAME || "HashBazaar";
-const API_BASE_URL = process.env.HASHKEY_API_BASE || "https://merchant-qa.hashkeymerchant.com";
+const MERCHANT_ID = process.env.MERCHANT_ID || "09562108";
+const API_BASE_URL = process.env.HASHKEY_API_BASE || "https://dev-gateway.hashkey.com";
 
 // Read the static private key from the file system (outside the backend folder for security)
 let pemPrivateKey = "";
@@ -21,62 +40,34 @@ try {
   console.warn("Warning: merchant_private_key.pem not found. JWT signing will fail.");
 }
 
-// A helper function to implement Canonical JSON (recursively sorting object keys alphabetically)
-function canonicalizeJson(obj: any): any {
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(canonicalizeJson);
-  }
-  
-  const sortedKeys = Object.keys(obj).sort();
-  const result: Record<string, any> = {};
-  
-  for (const key of sortedKeys) {
-    result[key] = canonicalizeJson(obj[key]);
-  }
-  
-  return result;
-}
-
-function generateCartHash(contents: any): string {
-  // HashKey requires Canonical JSON serialization:
-  // 1. Key name sorting: Recursively sort all object keys in ascending alphabetical order
-  // 2. Compact format: Does not contain formatting characters such as spaces or line breaks
-  const canonicalContents = canonicalizeJson(contents);
-  const serialized = JSON.stringify(canonicalContents);
-  return crypto.createHash('sha256').update(serialized).digest('hex');
-}
-
-async function generateMerchantAuthorization(cartHash: string): Promise<string> {
+async function generateMerchantAuthorization(contents: any): Promise<string> {
   const payload = {
-    iss: MERCHANT_NAME,
-    sub: MERCHANT_NAME,
+    iss: "merchant", // Based on the official example provided
     aud: "HashkeyMerchant",
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
-    jti: crypto.randomUUID(),
-    cart_hash: cartHash
+    contents: contents // Embed contents directly in payload, not as cart_hash
   };
 
-  // Hashkey requires ES256K. Neither jsonwebtoken nor jose fully support ES256K seamlessly.
-  // So we manually sign the JWT using crypto.
-  
   const header = { alg: 'ES256K', typ: 'JWT' };
-  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  
+  // Use manualCanonicalize (RFC8785) for exact byte-for-byte matches
+  const canonicalHeader = manualCanonicalize(header) || "";
+  const canonicalPayload = manualCanonicalize(payload) || "";
+  
+  const encodedHeader = Buffer.from(canonicalHeader).toString('base64url');
+  const encodedPayload = Buffer.from(canonicalPayload).toString('base64url');
+  
   const signingInput = `${encodedHeader}.${encodedPayload}`;
   
-  const sign = crypto.createSign('SHA256');
+  // Sign using crypto directly for secp256k1 (ES256K)
+  const sign = crypto.createSign('RSA-SHA256'); // For EC secp256k1, node crypto uses 'RSA-SHA256' or 'SHA256' as the hash digest
   sign.update(signingInput);
   sign.end();
   
   const signatureDer = sign.sign(pemPrivateKey);
   
   // Convert DER to raw format (64 bytes for ES256K / P-256K)
-  // We can use the ecdsa-sig-formatter library which jsonwebtoken uses internally.
   const jwt = `${signingInput}.${derToRaw(signatureDer).toString('base64url')}`;
   
   return jwt;
@@ -177,8 +168,7 @@ export async function createHashKeyOrder(details: OrderDetails) {
     merchant_name: MERCHANT_NAME
   };
 
-  const cartHash = generateCartHash(contents);
-  const jwtToken = await generateMerchantAuthorization(cartHash);
+  const jwtToken = await generateMerchantAuthorization(contents);
 
   // According to docs, the payload has a root object with `cart_mandate` and `redirect_url`
   const body = {
