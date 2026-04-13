@@ -21,9 +21,32 @@ try {
   console.warn("Warning: merchant_private_key.pem not found. JWT signing will fail.");
 }
 
+// A helper function to implement Canonical JSON (recursively sorting object keys alphabetically)
+function canonicalizeJson(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(canonicalizeJson);
+  }
+  
+  const sortedKeys = Object.keys(obj).sort();
+  const result: Record<string, any> = {};
+  
+  for (const key of sortedKeys) {
+    result[key] = canonicalizeJson(obj[key]);
+  }
+  
+  return result;
+}
+
 function generateCartHash(contents: any): string {
-  // Note: For production, ensure this is a canonical JSON stringifier
-  const serialized = JSON.stringify(contents);
+  // HashKey requires Canonical JSON serialization:
+  // 1. Key name sorting: Recursively sort all object keys in ascending alphabetical order
+  // 2. Compact format: Does not contain formatting characters such as spaces or line breaks
+  const canonicalContents = canonicalizeJson(contents);
+  const serialized = JSON.stringify(canonicalContents);
   return crypto.createHash('sha256').update(serialized).digest('hex');
 }
 
@@ -116,7 +139,9 @@ export interface OrderDetails {
 }
 
 export async function createHashKeyOrder(details: OrderDetails) {
-  const apiPath = "/api/v1/merchant/orders"; // HashKey API endpoint paths are usually /api/v1/merchant/...
+  // Correct endpoint as per the docs:
+  // POST: /api/v1/public/payments/cart-mandate
+  const apiPath = "/api/v1/public/payments/cart-mandate";
   const endpoint = `${API_BASE_URL}${apiPath}`;
 
   const contents = {
@@ -135,9 +160,15 @@ export async function createHashKeyOrder(details: OrderDetails) {
         }
       }],
       details: {
-        id: `PAY-${Date.now()}`,
+        id: `PAY-REQ-${Date.now()}`,
+        display_items: [
+          {
+            label: details.productName,
+            amount: { currency: "USD", value: details.amount }
+          }
+        ],
         total: {
-          label: details.productName,
+          label: "Total",
           amount: { currency: "USD", value: details.amount }
         }
       }
@@ -149,11 +180,13 @@ export async function createHashKeyOrder(details: OrderDetails) {
   const cartHash = generateCartHash(contents);
   const jwtToken = await generateMerchantAuthorization(cartHash);
 
+  // According to docs, the payload has a root object with `cart_mandate` and `redirect_url`
   const body = {
     cart_mandate: {
       contents: contents,
       merchant_authorization: jwtToken
-    }
+    },
+    redirect_url: "https://hashbazaar.com/payment/callback" // This would be your frontend callback URL
   };
 
   const bodyStr = JSON.stringify(body);
