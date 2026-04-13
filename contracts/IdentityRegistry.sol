@@ -20,8 +20,8 @@ contract IdentityRegistry is ERC721, Ownable {
     mapping(uint256 => bool) public isNullifierUsed;
     mapping(uint256 => bool) public isValidCommitment;
     
-    // Mapping from tokenId to the user's KYC role (1 = Merchant, 2 = Agent)
-    mapping(uint256 => uint256) public userRole;
+    // Mapping from user address to their KYC role (1 = Merchant, 2 = Agent)
+    mapping(address => uint256) public userRole;
 
     uint256 private _nextTokenId;
 
@@ -61,6 +61,7 @@ contract IdentityRegistry is ERC721, Ownable {
 
         require(isValidCommitment[commitment], "Invalid or unknown KYC commitment");
         require(!isNullifierUsed[nullifierHash], "KYC credential already used");
+        require(balanceOf(msg.sender) == 0, "User already has an Identity");
         
         bool isValidProof = verifier.verifyProof(a, b, c, input);
         require(isValidProof, "Invalid ZK proof");
@@ -68,7 +69,7 @@ contract IdentityRegistry is ERC721, Ownable {
         isNullifierUsed[nullifierHash] = true;
 
         uint256 tokenId = _nextTokenId++;
-        userRole[tokenId] = role;
+        userRole[msg.sender] = role;
         _mint(msg.sender, tokenId);
 
         emit IdentityVerified(msg.sender, tokenId, nullifierHash, role);
@@ -80,7 +81,7 @@ contract IdentityRegistry is ERC721, Ownable {
     function revokeIdentity(uint256 tokenId) external onlyOwner {
         address user = ownerOf(tokenId);
         _burn(tokenId);
-        userRole[tokenId] = 0; // Reset role
+        userRole[user] = 0; // Reset role
         emit IdentityRevoked(user, tokenId);
     }
 
@@ -88,18 +89,7 @@ contract IdentityRegistry is ERC721, Ownable {
      * @dev Returns the role of a given user. Returns 0 if not verified.
      */
     function getUserRole(address user) external view returns (uint256) {
-        if (balanceOf(user) == 0) return 0;
-        
-        for (uint256 i = 0; i < _nextTokenId; i++) {
-            try this.ownerOf(i) returns (address owner) {
-                if (owner == user) {
-                    return userRole[i];
-                }
-            } catch {
-                continue;
-            }
-        }
-        return 0;
+        return userRole[user];
     }
 
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {

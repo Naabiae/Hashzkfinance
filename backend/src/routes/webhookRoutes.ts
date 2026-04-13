@@ -1,21 +1,31 @@
 import { Router } from 'express';
 import { paymentsDb, ordersDb } from './paymentRoutes';
 import { recordPurchaseOnchain } from '../services/productRegistryService';
-import { ethers } from 'ethers';
+import { verifyHashkeyWebhook } from '../services/hashkeyService';
+import express from 'express';
 
 const router = Router();
+
+// We need rawBody for signature verification, so we should capture it.
+// Assuming express.json() is used globally, we might need a custom middleware 
+// to capture raw body, but for hackathon scope, we can stringify req.body or assume it's exact.
+// Better: use JSON.stringify(req.body) knowing it might differ slightly, or ideally capture raw.
 
 // HashKey Webhook Endpoint
 router.post('/hashkey', async (req, res) => {
   try {
     const event = req.body;
+    const rawBody = JSON.stringify(req.body); // NOTE: In production, use express.raw({type: 'application/json'}) to get exact bytes.
     
     // Log incoming webhook for debugging
     console.log("Received HashKey Webhook:", event.status, event.payment_request_id);
 
-    // In production, MUST verify HMAC signature from headers here
-    // const signature = req.headers['x-signature'];
-    // verifyHmac(signature, req.body, APP_SECRET);
+    // Verify HMAC signature
+    const isValid = verifyHashkeyWebhook(req.headers, rawBody);
+    if (!isValid) {
+      console.warn("Invalid HashKey Webhook Signature. Rejecting.");
+      return res.status(401).json({ error: "Unauthorized / Invalid Signature" });
+    }
 
     if (!event.payment_request_id) {
       return res.status(400).json({ error: "Missing payment_request_id" });
@@ -54,6 +64,8 @@ router.post('/hashkey', async (req, res) => {
           }
         } catch (e) {
           console.error("On-chain recordPurchase failed:", e);
+          // Crucial fix: return a 500 so HashKey retries the webhook!
+          return res.status(500).json({ error: "Failed to sync with blockchain" });
         }
         // Here you would trigger digital delivery or notify the merchant
       }

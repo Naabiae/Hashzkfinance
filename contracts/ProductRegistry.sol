@@ -21,9 +21,10 @@ contract ProductRegistry is Ownable {
         address merchant;
         uint256 priceUSDC; // Price in USDC with 6 decimals
         string metadataURI; // IPFS URI containing name, description, image, etc.
-        uint256 stock;
-        uint256 sold;
         bool isActive;
+        bool isUnlimitedStock; // Flag to differentiate between 0 stock and unlimited stock
+        uint256 stock; // Max units available (if not unlimited)
+        uint256 sold; // Units sold so far
     }
 
     mapping(uint256 => Product) public products;
@@ -51,14 +52,14 @@ contract ProductRegistry is Ownable {
      * @param metadataURI The IPFS URI for product metadata.
      */
     function listProduct(uint256 priceUSDC, string calldata metadataURI) external returns (uint256) {
-        return _listProduct(priceUSDC, metadataURI, 0);
+        return _listProduct(priceUSDC, metadataURI, 0, true);
     }
 
     function listProductWithStock(uint256 priceUSDC, string calldata metadataURI, uint256 stock) external returns (uint256) {
-        return _listProduct(priceUSDC, metadataURI, stock);
+        return _listProduct(priceUSDC, metadataURI, stock, false);
     }
 
-    function _listProduct(uint256 priceUSDC, string calldata metadataURI, uint256 stock) internal returns (uint256) {
+    function _listProduct(uint256 priceUSDC, string calldata metadataURI, uint256 stock, bool isUnlimited) internal returns (uint256) {
         uint256 role = identityRegistry.getUserRole(msg.sender);
         require(role == 1 || role == 3, "Only verified Merchants can list products");
         require(priceUSDC > 0, "Price must be greater than zero");
@@ -71,9 +72,10 @@ contract ProductRegistry is Ownable {
             merchant: msg.sender,
             priceUSDC: priceUSDC,
             metadataURI: metadataURI,
+            isActive: true,
+            isUnlimitedStock: isUnlimited,
             stock: stock,
-            sold: 0,
-            isActive: true
+            sold: 0
         });
 
         emit ProductListed(productId, msg.sender, priceUSDC, metadataURI);
@@ -83,7 +85,7 @@ contract ProductRegistry is Ownable {
     /**
      * @dev Updates an existing product. Only the owning merchant can call this.
      */
-    function updateProduct(uint256 productId, uint256 newPrice, string calldata newMetadata, bool isActive) external {
+    function updateProduct(uint256 productId, uint256 newPrice, string calldata newMetadata, bool isActive, bool isUnlimited, uint256 newStock) external {
         Product storage product = products[productId];
         require(product.merchant == msg.sender, "Only the owning merchant can update this product");
         require(newPrice > 0, "Price must be greater than zero");
@@ -91,6 +93,8 @@ contract ProductRegistry is Ownable {
         product.priceUSDC = newPrice;
         product.metadataURI = newMetadata;
         product.isActive = isActive;
+        product.isUnlimitedStock = isUnlimited;
+        product.stock = newStock;
 
         emit ProductUpdated(productId, newPrice, newMetadata, isActive);
     }
@@ -101,9 +105,8 @@ contract ProductRegistry is Ownable {
         require(quantity > 0, "Quantity must be greater than zero");
 
         Product storage product = products[productId];
-        require(product.isActive, "Product inactive");
-
-        if (product.stock != 0) {
+        require(product.isActive, "Product is not active");
+        if (!product.isUnlimitedStock) {
             require(product.sold + quantity <= product.stock, "Out of stock");
         }
 

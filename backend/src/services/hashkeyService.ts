@@ -95,7 +95,37 @@ function derToRaw(der: Buffer): Buffer {
   return raw;
 }
 
-function generateHmacHeaders(method: string, apiPath: string, query: string, bodyStr: string) {
+export function verifyHashkeyWebhook(headers: any, rawBody: string): boolean {
+  const method = "POST";
+  const apiPath = "/api/webhook/hashkey"; // Should match exactly what HashKey thinks it's hitting
+  const query = ""; // Usually empty for POST webhooks unless there are query params
+  const bodyHash = rawBody ? crypto.createHash('sha256').update(rawBody).digest('hex') : "";
+  const timestamp = headers['x-timestamp'];
+  const nonce = headers['x-nonce'];
+  const providedSignature = headers['x-signature'];
+
+  if (!timestamp || !nonce || !providedSignature) return false;
+
+  // The timestamp validity check (5 minutes)
+  const now = Math.floor(Date.now() / 1000);
+  const ts = parseInt(timestamp, 10);
+  if (Math.abs(now - ts) > 300) return false; // 5 mins expired
+
+  const message = [
+    method,
+    apiPath,
+    query,
+    bodyHash,
+    timestamp,
+    nonce
+  ].join('\n');
+
+  const calculatedSignature = crypto.createHmac('sha256', APP_SECRET)
+                                    .update(message)
+                                    .digest('hex');
+
+  return calculatedSignature === providedSignature;
+}
   const timestamp = Date.now().toString();
   const nonce = crypto.randomBytes(16).toString('hex');
   const bodyHash = bodyStr ? crypto.createHash('sha256').update(bodyStr).digest('hex') : "";

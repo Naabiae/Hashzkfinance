@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createHashKeyOrder } from '../services/hashkeyService';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -16,7 +17,8 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const orderId = `ORD-${Date.now()}`;
+    // Use random UUID to avoid collision
+    const orderId = `ORD-${crypto.randomUUID()}`;
 
     // 1. Save order to DB (mock)
     const order = {
