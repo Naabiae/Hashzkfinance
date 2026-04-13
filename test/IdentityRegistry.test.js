@@ -167,6 +167,8 @@ describe("HashBazaar Ecosystem - IdentityRegistry, P2PEscrow, ProductRegistry", 
       expect(product.merchant).to.equal(merchant.address);
       expect(product.priceUSDC).to.equal(price);
       expect(product.metadataURI).to.equal(metadata);
+      expect(product.stock).to.equal(0n);
+      expect(product.sold).to.equal(0n);
       expect(product.isActive).to.be.true;
     });
 
@@ -178,6 +180,36 @@ describe("HashBazaar Ecosystem - IdentityRegistry, P2PEscrow, ProductRegistry", 
       await expect(
         productRegistry.connect(nonVerifiedUser).listProduct(price, metadata)
       ).to.be.revertedWith("Only verified Merchants can list products");
+    });
+
+    it("should record a successful purchase with idempotency and stock enforcement", async function () {
+      const stock = 2n;
+      await productRegistry.connect(merchant).listProductWithStock(price, metadata, stock);
+      await productRegistry.connect(owner).setPaymentRelayer(owner.address);
+
+      const paymentRef1 = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("pay-1"));
+      await expect(productRegistry.connect(owner).recordPurchase(0, agent.address, 1, paymentRef1))
+        .to.emit(productRegistry, "PurchaseRecorded")
+        .withArgs(0, paymentRef1, agent.address, 1);
+
+      let product = await productRegistry.products(0);
+      expect(product.stock).to.equal(stock);
+      expect(product.sold).to.equal(1n);
+
+      await expect(
+        productRegistry.connect(owner).recordPurchase(0, agent.address, 1, paymentRef1)
+      ).to.be.revertedWith("Payment already recorded");
+
+      const paymentRef2 = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("pay-2"));
+      await productRegistry.connect(owner).recordPurchase(0, agent.address, 1, paymentRef2);
+
+      product = await productRegistry.products(0);
+      expect(product.sold).to.equal(2n);
+
+      const paymentRef3 = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("pay-3"));
+      await expect(
+        productRegistry.connect(owner).recordPurchase(0, agent.address, 1, paymentRef3)
+      ).to.be.revertedWith("Out of stock");
     });
   });
 

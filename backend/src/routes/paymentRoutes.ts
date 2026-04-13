@@ -10,7 +10,7 @@ export const paymentsDb: any[] = [];
 // Create a new payment session
 router.post('/create', async (req, res) => {
   try {
-    const { productId, amount, merchantWallet, productName } = req.body;
+    const { productId, amount, merchantWallet, productName, buyerWallet } = req.body;
 
     if (!productId || !amount || !merchantWallet) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -23,6 +23,7 @@ router.post('/create', async (req, res) => {
       id: orderId,
       productId,
       amount,
+      buyerWallet,
       status: "pending"
     };
     ordersDb.push(order);

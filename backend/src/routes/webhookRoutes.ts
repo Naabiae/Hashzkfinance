@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { paymentsDb, ordersDb } from './paymentRoutes';
+import { recordPurchaseOnchain } from '../services/productRegistryService';
+import { ethers } from 'ethers';
 
 const router = Router();
 
@@ -35,6 +37,24 @@ router.post('/hashkey', async (req, res) => {
       if (orderIndex !== -1) {
         ordersDb[orderIndex].status = "paid";
         console.log(`✅ Order ${payment.orderId} marked as PAID.`);
+
+        const order = ordersDb[orderIndex];
+        const buyer = order.buyerWallet || ethers.ZeroAddress;
+        const paymentRef = ethers.keccak256(ethers.toUtf8Bytes(String(event.payment_request_id)));
+
+        try {
+          const onchain = await recordPurchaseOnchain({
+            productId: order.productId,
+            buyer,
+            quantity: 1,
+            paymentRef
+          });
+          if (!onchain.skipped) {
+            console.log(`🧾 On-chain purchase recorded: ${onchain.txHash}`);
+          }
+        } catch (e) {
+          console.error("On-chain recordPurchase failed:", e);
+        }
         // Here you would trigger digital delivery or notify the merchant
       }
     } 
