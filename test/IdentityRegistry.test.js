@@ -3,8 +3,8 @@ import hre from "hardhat";
 import { groth16 } from "snarkjs";
 import { buildPoseidon } from "circomlibjs";
 
-describe("HashBazaar Ecosystem - IdentityRegistry and P2PEscrow", function () {
-  let verifier, identityRegistry, usdcMock, p2pEscrow;
+describe("HashBazaar Ecosystem - IdentityRegistry, P2PEscrow, ProductRegistry", function () {
+  let verifier, identityRegistry, usdcMock, p2pEscrow, productRegistry;
   let owner, merchant, agent, nonVerifiedUser;
   let poseidon;
 
@@ -30,6 +30,10 @@ describe("HashBazaar Ecosystem - IdentityRegistry and P2PEscrow", function () {
     // 4. Deploy P2PEscrow
     const P2PEscrow = await hre.ethers.getContractFactory("P2PEscrow");
     p2pEscrow = await P2PEscrow.deploy(await identityRegistry.getAddress(), await usdcMock.getAddress());
+
+    // 5. Deploy ProductRegistry
+    const ProductRegistry = await hre.ethers.getContractFactory("ProductRegistry");
+    productRegistry = await ProductRegistry.deploy(await identityRegistry.getAddress());
 
     // Helper: Mint KYC for Merchant (Role 1)
     const mintIdentity = async (user, role, secret, nullifier) => {
@@ -149,4 +153,32 @@ describe("HashBazaar Ecosystem - IdentityRegistry and P2PEscrow", function () {
       expect(await usdcMock.balanceOf(merchant.address)).to.equal(hre.ethers.parseUnits("1000", 6));
     });
   });
+
+  describe("ProductRegistry", function () {
+    const price = hre.ethers.parseUnits("50", 6);
+    const metadata = "ipfs://QmDummyHash";
+
+    it("should allow a verified Merchant to list a product", async function () {
+      await expect(productRegistry.connect(merchant).listProduct(price, metadata))
+        .to.emit(productRegistry, "ProductListed")
+        .withArgs(0, merchant.address, price, metadata);
+
+      const product = await productRegistry.products(0);
+      expect(product.merchant).to.equal(merchant.address);
+      expect(product.priceUSDC).to.equal(price);
+      expect(product.metadataURI).to.equal(metadata);
+      expect(product.isActive).to.be.true;
+    });
+
+    it("should prevent non-Merchants (or Agents) from listing products", async function () {
+      await expect(
+        productRegistry.connect(agent).listProduct(price, metadata)
+      ).to.be.revertedWith("Only verified Merchants can list products");
+
+      await expect(
+        productRegistry.connect(nonVerifiedUser).listProduct(price, metadata)
+      ).to.be.revertedWith("Only verified Merchants can list products");
+    });
+  });
+
 });
