@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
@@ -27,7 +27,7 @@ function generateCartHash(contents: any): string {
   return crypto.createHash('sha256').update(serialized).digest('hex');
 }
 
-function generateMerchantAuthorization(cartHash: string): string {
+async function generateMerchantAuthorization(cartHash: string): Promise<string> {
   const payload = {
     iss: MERCHANT_NAME,
     sub: MERCHANT_NAME,
@@ -38,7 +38,47 @@ function generateMerchantAuthorization(cartHash: string): string {
     cart_hash: cartHash
   };
 
-  return jwt.sign(payload, pemPrivateKey, { algorithm: 'ES256K' as any });
+  // Hashkey requires ES256K. Neither jsonwebtoken nor jose fully support ES256K seamlessly.
+  // So we manually sign the JWT using crypto.
+  
+  const header = { alg: 'ES256K', typ: 'JWT' };
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+  
+  const sign = crypto.createSign('SHA256');
+  sign.update(signingInput);
+  sign.end();
+  
+  const signatureDer = sign.sign(pemPrivateKey);
+  
+  // Convert DER to raw format (64 bytes for ES256K / P-256K)
+  // We can use the ecdsa-sig-formatter library which jsonwebtoken uses internally.
+  const jwt = `${signingInput}.${derToRaw(signatureDer).toString('base64url')}`;
+  
+  return jwt;
+}
+
+// A simple utility to convert DER ECDSA signature to 64-byte raw signature (R | S)
+function derToRaw(der: Buffer): Buffer {
+  let offset = 0;
+  if (der[offset++] !== 0x30) throw new Error('Expected sequence tag');
+  const seqLength = der[offset++];
+  if (der[offset++] !== 0x02) throw new Error('Expected integer tag');
+  let rLength = der[offset++];
+  let r = der.subarray(offset, offset + rLength);
+  offset += rLength;
+  if (der[offset++] !== 0x02) throw new Error('Expected integer tag');
+  let sLength = der[offset++];
+  let s = der.subarray(offset, offset + sLength);
+
+  if (r.length > 32 && r[0] === 0x00) r = r.subarray(1);
+  if (s.length > 32 && s[0] === 0x00) s = s.subarray(1);
+  
+  const raw = Buffer.alloc(64);
+  r.copy(raw, 32 - r.length);
+  s.copy(raw, 64 - s.length);
+  return raw;
 }
 
 function generateHmacHeaders(method: string, apiPath: string, query: string, bodyStr: string) {
@@ -76,7 +116,7 @@ export interface OrderDetails {
 }
 
 export async function createHashKeyOrder(details: OrderDetails) {
-  const apiPath = "/merchant/orders";
+  const apiPath = "/api/v1/merchant/orders"; // HashKey API endpoint paths are usually /api/v1/merchant/...
   const endpoint = `${API_BASE_URL}${apiPath}`;
 
   const contents = {
@@ -107,7 +147,7 @@ export async function createHashKeyOrder(details: OrderDetails) {
   };
 
   const cartHash = generateCartHash(contents);
-  const jwtToken = generateMerchantAuthorization(cartHash);
+  const jwtToken = await generateMerchantAuthorization(cartHash);
 
   const body = {
     cart_mandate: {
