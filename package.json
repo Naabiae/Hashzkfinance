@@ -28,5 +28,8 @@
     "ethers": "^6.16.0",
     "hardhat": "^2.22.17",
     "snarkjs": "^0.7.6"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
   }
 }
