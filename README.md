@@ -1,66 +1,104 @@
-# Hashzkfinance
+# HashBazaar (Hashzkfinance) — HashKey Hackathon Submission
 
-Now we're cooking 🔥 That's actually a **killer combo** — you just merged all 3 ideas into one coherent product. Let me break down what you're describing:
+HashBazaar is a compliant PayFi marketplace built on HashKey Chain:
+- **Merchants** become verified (ZK identity) and list products on-chain
+- **Buyers** pay via **HashKey Checkout** (backend webhook → on-chain receipt)
+- **Merchants** cash out to fiat using a **P2P escrow offramp** (agent network)
 
-**Compliant PayFi Marketplace** — merchants KYC via HashKey's infra → list products → buyers pay via single/multi-payment rails → P2P on/offramp layer for fiat conversion.
+This repo contains the full stack: smart contracts, backend relayer/webhook, and a judge-ready frontend.
 
-That's **PayFi track + DeFi track + compliance narrative** all in one shot. Judges can't ignore that.
+## Problem
+Real-world commerce needs:
+- Compliance (KYC/role gating) without leaking sensitive identity data
+- Reliable settlement rails (HashKey Checkout + verified webhooks)
+- A last-mile fiat offramp for merchants (especially in emerging markets)
 
-Let me think through the architecture with you:
+## Solution
+HashBazaar combines:
+- **ZK Identity Registry** (soulbound role NFT) to gate merchant/agent actions
+- **On-chain Product Registry** (inventory + idempotent purchases)
+- **P2P Escrow** for crypto↔fiat settlement coordination
+- **Backend webhook verifier + relayer** to securely bridge HashKey payment events to on-chain state
 
----
+## What’s Built
+### Smart Contracts
+- [IdentityRegistry.sol](file:///workspace/contracts/IdentityRegistry.sol): ZK proof verification + soulbound Identity NFT + O(1) role lookup
+- [ProductRegistry.sol](file:///workspace/contracts/ProductRegistry.sol): merchant listings, stock enforcement, idempotent on-chain purchase receipts
+- [P2PEscrow.sol](file:///workspace/contracts/P2PEscrow.sol): merchant cash-out orders, agent acceptance, merchant release, admin dispute resolution
 
-## 🏗️ Product: **HashBazaar** *(working name)*
-*Compliant On-Chain Merchant Marketplace with PayFi Rails*
+### Backend (Express)
+- Creates HashKey orders and redirects the buyer to checkout
+- Verifies signed webhooks (HMAC) and records purchases on-chain via a relayer
+- Key code:
+  - [paymentRoutes.ts](file:///workspace/backend/src/routes/paymentRoutes.ts)
+  - [webhookRoutes.ts](file:///workspace/backend/src/routes/webhookRoutes.ts)
+  - [hashkeyService.ts](file:///workspace/backend/src/services/hashkeyService.ts)
+  - [productRegistryService.ts](file:///workspace/backend/src/services/productRegistryService.ts)
 
-### The Flow:
+### Frontend (Next.js)
+Professional landing + flow explainer + marketplace app:
+- `/` Landing (investor/judge overview)
+- `/marketplace` Marketplace (HashKey checkout)
+- `/kyc` Identity/KYC minting
+- `/merchant` Merchant dashboard (list products, create escrow order)
+- `/agent` Agent dashboard (accept escrow orders)
+- `/contracts` Contract addresses + copy/explorer links
+
+## Deployed Contracts (HashKey Testnet)
+Latest deployment details are written to:
+- [deployed-addresses.txt](file:///workspace/deployed-addresses.txt)
+
+Current addresses:
+- Groth16Verifier: `0x238D45EF88697A2692DA0A2059317c9410B2c1B9`
+- IdentityRegistry: `0x28F756Fb7406d03b7DC48907d029902f9024ac16`
+- MockUSDC: `0x3d819f463FDefb6289B7874C8645fd4e5DB8c100`
+- P2PEscrow: `0x6C16aFe474F717058376329f9EDEbb8fe16ef794`
+- ProductRegistry: `0xD052fdaFc9Ab3207c6f26398f1E53A8f5a2c4276`
+
+## Verified End-to-End Testnet Flow
+We run a real testnet flow that:
+1) Funds merchant/agent wallets
+2) Mints merchant + agent identities via Groth16 proof
+3) Lists a product
+4) Records a purchase (relayer/owner call)
+5) Creates an escrow order → agent accepts → merchant releases funds
+
+Test script:
+- [test-deployed-flow.js](file:///workspace/scripts/test-deployed-flow.js)
+
+All tx hashes (deployment + flow) are saved in:
+- [transactions.md](file:///workspace/transactions.md)
+
+## How To Deploy
+Deployment script:
+- [deploy.js](file:///workspace/scripts/deploy.js)
+
+Command:
+```bash
+npx hardhat run scripts/deploy.js --network hashkeyTestnet
 ```
-Merchant KYC (HashKey KYC infra)
-    ↓
-List products/services on-chain
-    ↓
-Buyer pays → single payment OR split/multi-payment
-    ↓
-P2P Offramp: merchant can cash out to fiat via P2P agents
-P2P Onramp: buyer can fund wallet with fiat before buying
+
+## How To Run (Local)
+### Backend
+```bash
+cd backend
+npm install
+npm run dev
 ```
 
----
+### Frontend
+Create `frontend/.env.local` with the deployed addresses:
+```bash
+NEXT_PUBLIC_VERIFIER_ADDRESS=...
+NEXT_PUBLIC_IDENTITY_REGISTRY_ADDRESS=...
+NEXT_PUBLIC_USDC_ADDRESS=...
+NEXT_PUBLIC_P2P_ESCROW_ADDRESS=...
+NEXT_PUBLIC_PRODUCT_REGISTRY_ADDRESS=...
+```
 
-### Why this **specifically wins** the hackathon:
-
-1. **Uses HashKey's KYC testnet directly** — they built `kyc-testnet.hunyuankyc.com` and nobody's integrating it. Judges will see their own infra being used.
-2. **PayFi track** — merchant payments are THE use case HashKey keeps citing for PayFi
-3. **Compliance narrative** — KYC-gated marketplace is literally their DNA
-4. **P2P onramp/offramp** — this is the missing link between crypto payments and real-world adoption, and it's a gap on HashKey Chain right now
-
----
-
-### Scope breakdown (hackathon-sized):
-
-| Module | What to build | Complexity |
-|---|---|---|
-| **Merchant Registry** | Smart contract — KYC check → mint merchant NFT/badge | Low |
-| **Product Listing** | On-chain or IPFS-stored listings with price in USDC/HSK | Low |
-| **Payment Contract** | Single pay + installment/split pay logic | Medium |
-| **P2P Offramp** | Escrow contract — merchant posts order, P2P agent locks crypto, confirms fiat sent | Medium |
-| **Frontend** | Shop UI + merchant dashboard + P2P board | Medium |
-
-The P2P offramp is basically a **LocalBitcoins-style escrow** — dead simple contract: lock USDC → fiat confirmed off-chain → release. You've done escrow before.
-
----
-
-### What to cut for hackathon scope:
-
-- Don't build actual fiat rails — P2P is confirmed manually (like Binance P2P model), keeps it simple
-- Don't build a full product catalog UI — just enough to demo the flow
-- KYC can be a mock integration with HashKey testnet, not full production
-
----
-
-### Potential name ideas:
-- **HashBazaar** — compliant merchant marketplace
-- **PayGate** — sounds like a payment gateway
-- **Merx** — merchant + perx vibes
-
-What's your team situation — you solo or got a frontend dev? That changes how ambitious the P2P layer should be.
+Run:
+```bash
+cd frontend
+npm install
+npm run dev
+```
