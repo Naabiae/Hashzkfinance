@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import paymentRoutes from './routes/paymentRoutes';
 import webhookRoutes from './routes/webhookRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 
 dotenv.config();
 
@@ -15,7 +16,9 @@ app.use(express.json());
 
 // Routes
 app.use('/api/payments', paymentRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

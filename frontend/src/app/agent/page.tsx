@@ -2,9 +2,9 @@
 
 import { useWeb3, CONTRACT_ADDRESSES } from "@/contexts/Web3Context";
 import { ethers } from "ethers";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { RefreshCcw, CheckCircle, HandCoins } from "lucide-react";
+import { RefreshCcw, CheckCircle, HandCoins, Loader2 } from "lucide-react";
 
 // Minimal ABI for P2PEscrow
 const ESCROW_ABI = [
@@ -27,23 +27,14 @@ export default function AgentDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-
-  if (role !== 2) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <h1 className="text-3xl font-bold text-red-500 mb-4">Access Denied</h1>
-        <p className="text-muted">You need an Agent Identity NFT to view the Escrow Board.</p>
-      </div>
-    );
-  }
-
-  const fetchOrders = async () => {
+ 
+  const fetchOrders = useCallback(async () => {
     if (!signer) return;
     setLoading(true);
 
     try {
       const escrow = new ethers.Contract(CONTRACT_ADDRESSES.P2PEscrow, ESCROW_ABI, signer);
-      const count = await escrow.nextOrderId();
+      const count = Number(await escrow.nextOrderId());
       
       const fetchedOrders: Order[] = [];
       for (let i = 0; i < count; i++) {
@@ -63,11 +54,11 @@ export default function AgentDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [signer]);
 
   useEffect(() => {
-    if (signer) fetchOrders();
-  }, [signer]);
+    if (signer && role === 2) fetchOrders();
+  }, [fetchOrders, role, signer]);
 
   const handleAcceptOrder = async (orderId: number) => {
     if (!signer) return;
@@ -98,6 +89,17 @@ export default function AgentDashboard() {
       default: return <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">Unknown</span>;
     }
   };
+
+  if (role !== 2) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <h1 className="text-3xl font-bold mb-3">Escrow Board</h1>
+        <p className="text-muted text-center max-w-lg">
+          This page is available to verified Agents only.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useWeb3, CONTRACT_ADDRESSES } from "@/contexts/Web3Context";
-import { motion } from "framer-motion";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import { ethers } from "ethers";
 

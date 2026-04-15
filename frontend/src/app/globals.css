@@ -3,16 +3,24 @@
 @tailwind utilities;
 
 :root {
-  --font-sans-family: "SF Pro Display", system-ui, sans-serif;
-  --primary: #0084ff;
-  --secondary: #d3eec9;
+  --font-sans-family: "Geist", system-ui, sans-serif;
+  --primary: #d97706;
+  --secondary: #f2efe9;
   --tertiary: #fff;
-  --background: #fff;
-  --foreground: #252f2c;
-  --surface: #f4faef;
-  --surface-strong: #e8f6e0;
-  --border: #252f2c1f;
-  --muted: #252f2cb8;
+  --background: #fbfaf8;
+  --foreground: #1c1b18;
+  --surface: #ffffff;
+  --surface-strong: #f4f2ee;
+  --border: rgba(28, 27, 24, 0.12);
+  --muted: rgba(28, 27, 24, 0.64);
+  --muted-foreground: var(--muted);
+  --card: var(--surface);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: var(--foreground);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 999px;
 }
 
 body {
@@ -22,10 +30,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Base component styles based on the tryclink aesthetic */
 @layer components {
   .btn-primary {
-    @apply bg-[var(--primary)] text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-sm;
+    @apply bg-[var(--foreground)] text-[var(--background)] px-6 py-2.5 rounded-full font-medium transition-all duration-200 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-sm;
   }
   
   .btn-secondary {
@@ -37,10 +44,10 @@ body {
   }
 
   .card {
-    @apply bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300;
+    @apply bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-6 shadow-sm hover:shadow-md transition-shadow duration-300;
   }
 
   .input-field {
-    @apply w-full border border-[var(--border)] bg-[var(--surface)] rounded-xl px-4 py-3 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all;
+    @apply w-full border border-[var(--border)] bg-[var(--surface)] rounded-[var(--radius-md)] px-4 py-3 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--foreground)] focus:border-transparent transition-all;
   }
 }

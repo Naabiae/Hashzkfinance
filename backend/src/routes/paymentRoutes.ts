@@ -26,6 +26,9 @@ router.post('/create', async (req, res) => {
       productId,
       amount,
       buyerWallet,
+      merchantWallet,
+      productName,
+      createdAt: Date.now(),
       status: "pending"
     };
     ordersDb.push(order);
@@ -43,6 +46,10 @@ router.post('/create', async (req, res) => {
       orderId: order.id,
       paymentRequestId: paymentResult.payment_request_id, // Based on HashKey docs
       paymentUrl: paymentResult.payment_url,
+      merchantWallet,
+      productId,
+      amount,
+      createdAt: Date.now(),
       status: "pending"
     });
 

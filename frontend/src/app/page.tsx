@@ -2,7 +2,7 @@
 
 import { useWeb3 } from "@/contexts/Web3Context";
 import { ShoppingBag, ArrowRight } from "lucide-react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { useState } from "react";
 import { motion } from "framer-motion";
 
@@ -26,7 +26,7 @@ export default function Storefront() {
     setLoadingId(product.id);
     try {
       // In production, this URL would point to the deployed Express backend
-      const res = await axios.post("http://localhost:3001/api/payment/create", {
+      const res = await api.post("/api/payments/create", {
         productId: product.id,
         amount: product.price,
         merchantWallet: product.merchant,
@@ -55,7 +55,7 @@ export default function Storefront() {
             The Decentralized <span className="text-primary">Marketplace</span> for Web3
           </h1>
           <p className="text-xl text-muted mb-8 leading-relaxed">
-            Shop exclusive physical and digital goods directly using HashKey's secure crypto payment gateway. No middlemen, full transparency.
+            Shop exclusive physical and digital goods directly using HashKey&apos;s secure crypto payment gateway. No middlemen, full transparency.
           </p>
           <button className="btn-primary flex items-center space-x-2 text-lg px-8 py-4">
             <ShoppingBag className="w-5 h-5" />

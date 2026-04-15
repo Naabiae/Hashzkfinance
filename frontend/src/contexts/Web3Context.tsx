@@ -3,11 +3,12 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { ethers } from "ethers";
 
-// Hardcoded for the Hackathon Demo
 export const CONTRACT_ADDRESSES = {
-  IdentityRegistry: "0xYourIdentityRegistryAddressHere", // TODO: Update after deployment
-  ProductRegistry: "0xYourProductRegistryAddressHere",
-  P2PEscrow: "0xYourEscrowAddressHere"
+  IdentityRegistry: process.env.NEXT_PUBLIC_IDENTITY_REGISTRY_ADDRESS ?? "",
+  ProductRegistry: process.env.NEXT_PUBLIC_PRODUCT_REGISTRY_ADDRESS ?? "",
+  P2PEscrow: process.env.NEXT_PUBLIC_P2P_ESCROW_ADDRESS ?? "",
+  USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS ?? "",
+  Verifier: process.env.NEXT_PUBLIC_VERIFIER_ADDRESS ?? "",
 };
 
 interface Web3ContextType {
@@ -30,6 +31,16 @@ const Web3Context = createContext<Web3ContextType>({
   isLoading: true,
 });
 
+type EthereumProvider = ethers.Eip1193Provider & {
+  on?: (event: string, listener: (...args: unknown[]) => void) => void;
+};
+
+const getEthereum = (): EthereumProvider | null => {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as { ethereum?: EthereumProvider };
+  return w.ethereum ?? null;
+};
+
 export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
@@ -39,6 +50,10 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
 
   const checkRole = async (userAddress: string, ethersProvider: ethers.BrowserProvider) => {
     try {
+      if (!/^0x[a-fA-F0-9]{40}$/.test(CONTRACT_ADDRESSES.IdentityRegistry)) {
+        setRole(0);
+        return;
+      }
       // Mocking the IdentityRegistry ABI just for the getUserRole function
       const identityAbi = ["function getUserRole(address user) external view returns (uint256)"];
       const contract = new ethers.Contract(CONTRACT_ADDRESSES.IdentityRegistry, identityAbi, ethersProvider);
@@ -52,9 +67,10 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const connectWallet = async () => {
-    if (typeof window !== "undefined" && (window as any).ethereum) {
+    const ethereum = getEthereum();
+    if (ethereum) {
       try {
-        const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+        const browserProvider = new ethers.BrowserProvider(ethereum);
         await browserProvider.send("eth_requestAccounts", []);
         const ethersSigner = await browserProvider.getSigner();
         const userAddress = await ethersSigner.getAddress();
@@ -81,8 +97,9 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const init = async () => {
-      if (typeof window !== "undefined" && (window as any).ethereum) {
-        const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+      const ethereum = getEthereum();
+      if (ethereum) {
+        const browserProvider = new ethers.BrowserProvider(ethereum);
         const accounts = await browserProvider.send("eth_accounts", []);
         if (accounts.length > 0) {
           const ethersSigner = await browserProvider.getSigner();
@@ -97,11 +114,12 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     };
     init();
 
-    if ((window as any).ethereum) {
-      (window as any).ethereum.on('accountsChanged', () => {
+    const ethereum = getEthereum();
+    if (ethereum?.on) {
+      ethereum.on("accountsChanged", () => {
         window.location.reload();
       });
-      (window as any).ethereum.on('chainChanged', () => {
+      ethereum.on("chainChanged", () => {
         window.location.reload();
       });
     }

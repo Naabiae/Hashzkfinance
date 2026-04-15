@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useWeb3, CONTRACT_ADDRESSES } from "@/contexts/Web3Context";
 import { ethers } from "ethers";
-import { PlusCircle, DollarSign, PackageOpen } from "lucide-react";
+import {
+  ArrowUpRight,
+  BarChart3,
+  DollarSign,
+  HandCoins,
+  PackageOpen,
+  PlusCircle,
+  RefreshCcw,
+  ShoppingCart,
+} from "lucide-react";
+import { MetricCard } from "@/components/MetricCard";
+import { formatUSDCFrom6 } from "@/lib/format";
+import { useMerchantInsights } from "@/hooks/useMerchantInsights";
 
 // Minimal ABI for ProductRegistry
 const PRODUCT_REGISTRY_ABI = [
@@ -20,18 +32,50 @@ const USDC_ABI = [
 ];
 
 export default function MerchantDashboard() {
-  const { address, signer, role } = useWeb3();
+  const { signer, role } = useWeb3();
   const [activeTab, setActiveTab] = useState<"inventory" | "escrow">("inventory");
 
   const [form, setForm] = useState({ name: "", price: "", stock: "", image: "" });
   const [escrowAmount, setEscrowAmount] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const { products, analytics, totals, error, refresh, loading: insightsLoading } = useMerchantInsights();
+
+  const productRows = useMemo(() => {
+    return products.map((p) => {
+      let meta: { name?: string; image?: string } = {};
+      try {
+        meta = JSON.parse(p.metadataURI || "{}");
+      } catch {}
+
+      const sold = p.sold;
+      const price = p.priceUSDC;
+      const revenue = sold * price;
+
+      const stock = p.isUnlimitedStock ? null : p.stock;
+      const progress =
+        stock && stock > BigInt(0) ? Number((sold * BigInt(100)) / stock) : 0;
+
+      return {
+        id: p.id,
+        name: meta.name ?? `Product #${p.id}`,
+        active: p.isActive,
+        price,
+        sold,
+        stock,
+        revenue,
+        progress: Math.max(0, Math.min(100, progress)),
+      };
+    });
+  }, [products]);
+
   if (role !== 1) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <h1 className="text-3xl font-bold text-red-500 mb-4">Access Denied</h1>
-        <p className="text-muted">You need a Merchant Identity NFT to view this dashboard.</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <h1 className="text-3xl font-bold mb-3">Merchant Dashboard</h1>
+        <p className="text-muted max-w-lg">
+          This page is available to verified merchants only. Mint an Identity NFT on the verification page to unlock inventory and earnings.
+        </p>
       </div>
     );
   }
@@ -67,8 +111,11 @@ export default function MerchantDashboard() {
     setLoading(true);
 
     try {
-      const usdcAddress = "0xYourUSDCAddressHere"; // TODO: Replace
-      const usdc = new ethers.Contract(usdcAddress, USDC_ABI, signer);
+      if (!CONTRACT_ADDRESSES.USDC) {
+        alert("USDC contract address not configured. Set NEXT_PUBLIC_USDC_ADDRESS.");
+        return;
+      }
+      const usdc = new ethers.Contract(CONTRACT_ADDRESSES.USDC, USDC_ABI, signer);
       const escrow = new ethers.Contract(CONTRACT_ADDRESSES.P2PEscrow, ESCROW_ABI, signer);
       
       const amount = ethers.parseUnits(escrowAmount, 6);
@@ -92,12 +139,40 @@ export default function MerchantDashboard() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex justify-between items-end mb-12">
+    <div className="max-w-6xl mx-auto space-y-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Merchant Portal</h1>
-          <p className="text-muted">Manage your inventory and cash out your crypto earnings to fiat.</p>
+          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-muted">
+            <BarChart3 className="w-4 h-4" />
+            Merchant Analytics
+          </div>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight">Performance Overview</h1>
+          <p className="mt-3 text-muted max-w-2xl">
+            Live metrics combine on-chain product state with backend HashKey checkout activity.
+          </p>
         </div>
+        <button onClick={refresh} className="btn-outline inline-flex items-center gap-2">
+          <RefreshCcw className={insightsLoading ? "w-4 h-4 animate-spin" : "w-4 h-4"} />
+          Refresh
+        </button>
+      </div>
+
+      {error ? (
+        <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-5 text-sm text-muted">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard label="Gross On-chain Revenue" value={`$${formatUSDCFrom6(totals.revenue)}`} hint="Based on ProductRegistry.sold * price" Icon={DollarSign} accent />
+        <MetricCard label="Units Sold" value={`${totals.sold.toString()}`} hint="All products listed by this wallet" Icon={ShoppingCart} />
+        <MetricCard label="Active Listings" value={`${totals.active}/${totals.listings}`} hint="Products currently active" Icon={PackageOpen} />
+        <MetricCard
+          label="Paid Checkouts (Backend)"
+          value={`${analytics?.counts.paidOrders ?? 0}`}
+          hint={`Total paid volume: $${analytics?.totals.totalPaidAmount ?? 0}`}
+          Icon={HandCoins}
+        />
       </div>
 
       {/* Tabs */}
@@ -119,7 +194,7 @@ export default function MerchantDashboard() {
       {/* Tab Content */}
       <div className="pt-6">
         {activeTab === "inventory" ? (
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid lg:grid-cols-2 gap-8">
             <div className="card">
               <h2 className="text-2xl font-bold mb-6 flex items-center">
                 <PackageOpen className="w-6 h-6 mr-3 text-primary" />
@@ -149,10 +224,73 @@ export default function MerchantDashboard() {
               </form>
             </div>
 
-            <div className="bg-surface rounded-2xl p-8 border border-border flex flex-col justify-center items-center text-center">
-              <h3 className="text-xl font-semibold mb-4">Your Active Listings</h3>
-              <p className="text-muted mb-6">You currently have no products listed. Add your first product to start selling securely via HashKey!</p>
-              {/* In a full app, map over fetched products here */}
+            <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold tracking-tight">Your Listings</h3>
+                <div className="text-xs text-muted">On-chain source: ProductRegistry</div>
+              </div>
+              <div className="mt-5 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase tracking-wide text-muted">
+                      <th className="text-left py-3">Item</th>
+                      <th className="text-right py-3">Price</th>
+                      <th className="text-right py-3">Sold</th>
+                      <th className="text-right py-3">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {productRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-10 text-center text-muted">
+                          No listings yet. Create your first product to start selling.
+                        </td>
+                      </tr>
+                    ) : (
+                      productRows.map((r) => (
+                        <tr key={r.id} className="align-top">
+                          <td className="py-4 pr-4">
+                            <div className="font-medium text-foreground">{r.name}</div>
+                            <div className="mt-1 text-xs text-muted">
+                              #{r.id} · {r.active ? "Active" : "Inactive"}{" "}
+                              {r.stock ? `· Stock ${r.stock.toString()}` : r.stock === null ? "· Unlimited" : ""}
+                            </div>
+                            {r.stock ? (
+                              <div className="mt-3 h-1.5 w-full bg-surface-strong rounded-full overflow-hidden border border-border">
+                                <div className="h-full bg-foreground" style={{ width: `${r.progress}%` }} />
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="py-4 text-right font-mono">${formatUSDCFrom6(r.price)}</td>
+                          <td className="py-4 text-right font-mono">{r.sold.toString()}</td>
+                          <td className="py-4 text-right font-mono">${formatUSDCFrom6(r.revenue)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {totals.top ? (
+                <div className="mt-6 rounded-[var(--radius-md)] border border-border bg-surface-strong p-4 text-sm flex items-center justify-between">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted font-semibold">Top Product</div>
+                    <div className="mt-1 font-medium text-foreground">
+                      {(() => {
+                        try {
+                          const m = JSON.parse(totals.top.metadataURI || "{}");
+                          return m.name ?? `Product #${totals.top.id}`;
+                        } catch {
+                          return `Product #${totals.top.id}`;
+                        }
+                      })()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground font-mono">
+                    ${formatUSDCFrom6(totals.top.sold * totals.top.priceUSDC)}
+                    <ArrowUpRight className="w-4 h-4" />
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : (
