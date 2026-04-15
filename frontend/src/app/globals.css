@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans-family: "SF Pro Display", system-ui, sans-serif;
+  --primary: #0084ff;
+  --secondary: #d3eec9;
+  --tertiary: #fff;
+  --background: #fff;
+  --foreground: #252f2c;
+  --surface: #f4faef;
+  --surface-strong: #e8f6e0;
+  --border: #252f2c1f;
+  --muted: #252f2cb8;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base component styles based on the tryclink aesthetic */
+@layer components {
+  .btn-primary {
+    @apply bg-[var(--primary)] text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-sm;
+  }
+  
+  .btn-secondary {
+    @apply bg-[var(--secondary)] text-[var(--foreground)] px-6 py-2.5 rounded-full font-medium transition-all duration-200 hover:bg-[var(--surface-strong)] active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  
+  .btn-outline {
+    @apply border border-[var(--border)] text-[var(--foreground)] px-6 py-2.5 rounded-full font-medium transition-all duration-200 hover:bg-[var(--surface)] active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .card {
+    @apply bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300;
+  }
+
+  .input-field {
+    @apply w-full border border-[var(--border)] bg-[var(--surface)] rounded-xl px-4 py-3 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all;
+  }
+}
