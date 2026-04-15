@@ -67,8 +67,11 @@ export default function MerchantDashboard() {
     setLoading(true);
 
     try {
-      const usdcAddress = "0xYourUSDCAddressHere"; // TODO: Replace
-      const usdc = new ethers.Contract(usdcAddress, USDC_ABI, signer);
+      if (!CONTRACT_ADDRESSES.USDC) {
+        alert("USDC contract address not configured. Set NEXT_PUBLIC_USDC_ADDRESS.");
+        return;
+      }
+      const usdc = new ethers.Contract(CONTRACT_ADDRESSES.USDC, USDC_ABI, signer);
       const escrow = new ethers.Contract(CONTRACT_ADDRESSES.P2PEscrow, ESCROW_ABI, signer);
       
       const amount = ethers.parseUnits(escrowAmount, 6);

@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --font-sans-family: "SF Pro Display", system-ui, sans-serif;
+  --font-sans-family: "DM Sans", system-ui, sans-serif;
+  --font-family-body: var(--font-sans-family);
+  --font-family-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --primary: #0084ff;
   --secondary: #d3eec9;
   --tertiary: #fff;
@@ -13,16 +15,24 @@
   --surface-strong: #e8f6e0;
   --border: #252f2c1f;
   --muted: #252f2cb8;
+  --muted-foreground: var(--muted);
+  --card: #fff;
+  --primary-foreground: #fff;
+  --secondary-foreground: #252f2c;
+  --success: #22c55e;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 999px;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans-family);
+  font-family: var(--font-family-body);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Base component styles based on the tryclink aesthetic */
 @layer components {
   .btn-primary {
     @apply bg-[var(--primary)] text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-sm;

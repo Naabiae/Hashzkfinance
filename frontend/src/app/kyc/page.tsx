@@ -18,6 +18,7 @@ export default function KYCPage() {
 
   const generateAndMint = async () => {
     if (!signer) return alert("Connect wallet first");
+    if (!CONTRACT_ADDRESSES.IdentityRegistry) return alert("IdentityRegistry address not configured.");
     
     setIsGenerating(true);
     setStep(1);

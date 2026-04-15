@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
 import { Web3Provider } from "@/contexts/Web3Context";
 import { Navbar } from "@/components/Navbar";
+import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans-family",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-family-mono",
+});
 
 export const metadata: Metadata = {
   title: "HashBazaar | Web3 Commerce",
@@ -14,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="antialiased">
+    <html lang="en" className={`${dmSans.variable} ${plexMono.variable} antialiased`}>
       <body className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-white">
         <Web3Provider>
           <Navbar />

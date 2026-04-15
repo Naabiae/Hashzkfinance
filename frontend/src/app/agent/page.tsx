@@ -34,7 +34,7 @@ export default function AgentDashboard() {
 
     try {
       const escrow = new ethers.Contract(CONTRACT_ADDRESSES.P2PEscrow, ESCROW_ABI, signer);
-      const count = await escrow.nextOrderId();
+      const count = Number(await escrow.nextOrderId());
       
       const fetchedOrders: Order[] = [];
       for (let i = 0; i < count; i++) {
