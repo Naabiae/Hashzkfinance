@@ -7,4 +7,3 @@ export const api = axios.create({
   baseURL: BACKEND_URL,
   timeout: 30_000,
 });
-

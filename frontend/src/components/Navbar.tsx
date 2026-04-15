@@ -22,7 +22,10 @@ export function Navbar() {
             {/* Desktop Nav Links */}
             <div className="hidden md:ml-10 md:flex md:space-x-8">
               <Link href="/" className="text-foreground hover:text-primary transition-colors font-medium">
-                Storefront
+                Home
+              </Link>
+              <Link href="/marketplace" className="text-foreground hover:text-primary transition-colors font-medium">
+                Marketplace
               </Link>
               {role === 0 && (
                 <Link href="/kyc" className="text-foreground hover:text-primary transition-colors font-medium">
