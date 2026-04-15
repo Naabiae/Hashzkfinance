@@ -3,6 +3,7 @@ import { paymentsDb, ordersDb } from './paymentRoutes';
 import { recordPurchaseOnchain } from '../services/productRegistryService';
 import { verifyHashkeyWebhook } from '../services/hashkeyService';
 import express from 'express';
+import { ethers } from 'ethers';
 
 const router = Router();
 
@@ -40,7 +41,7 @@ router.post('/hashkey', async (req, res) => {
     }
 
     const payment = paymentsDb[paymentIndex];
-    const orderIndex = ordersDb.findIndex(o => o.id === payment.orderId);
+    const orderIndex = ordersDb.findIndex((o: any) => o.id === payment.orderId);
 
     if (event.status === "payment-successful") {
       paymentsDb[paymentIndex].status = "successful";

@@ -126,7 +126,9 @@ export function verifyHashkeyWebhook(headers: any, rawBody: string): boolean {
 
   return calculatedSignature === providedSignature;
 }
-  const timestamp = Date.now().toString();
+
+function generateHmacHeaders(method: string, apiPath: string, query: string, bodyStr: string) {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
   const nonce = crypto.randomBytes(16).toString('hex');
   const bodyHash = bodyStr ? crypto.createHash('sha256').update(bodyStr).digest('hex') : "";
 
