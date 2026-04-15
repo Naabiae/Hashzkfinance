@@ -1,0 +1,40 @@
+# HashBazaar Testnet Transactions
+
+## Deployer
+- Address: 0x7F89B953e4137c5c9BDdB7078e85B1167D7018C1
+- Network: hashkeyTestnet
+- ChainId: 133
+
+## Deployed Contracts
+- Groth16Verifier: 0x238D45EF88697A2692DA0A2059317c9410B2c1B9
+- IdentityRegistry: 0x28F756Fb7406d03b7DC48907d029902f9024ac16
+- MockUSDC: 0x3d819f463FDefb6289B7874C8645fd4e5DB8c100
+- P2PEscrow: 0x6C16aFe474F717058376329f9EDEbb8fe16ef794
+- ProductRegistry: 0xD052fdaFc9Ab3207c6f26398f1E53A8f5a2c4276
+
+## Deployment TXs
+- Groth16Verifier: 0xcb686c4d9e44d9a2977f5e79595fecef562d80a0ee37f0178cfdee3b905d9517
+- IdentityRegistry: 0xb70f51c96d1f773aa8510c201ed5e3cd341680f5b263472f80251d07f350932b
+- MockUSDC: 0xb636dbebaf4ab6289b212ac2f3236c0f31743e6e510e4d35b5d00a1dcb0aee09
+- P2PEscrow: 0x42d87bbb754cce05dabbeed2d9edb8a0c32780c3a7af6a8a033379cf282ebb0b
+- ProductRegistry: 0x9ca1d8e2ddd49ad5398456d14e40e85c70c7a20bde2fd76bc28ad816347fe260
+- SetPaymentRelayer: 0x9bb9cc112726bd22d8a9eb9f1ecafddd83822c7baf9fbf32938535c37cbd3367
+
+## Test Flow Wallets
+- Merchant: 0xAC6c36bC3da2D833bE53b072574bd18237d2e371
+- Agent: 0x2fc014113CD2fCC431EDa6D2C8ef9A3EC3014d7e
+- Buyer: 0x2D6c822dd34EC98AeeE81F9fd87D7d96261f07E7
+
+## Test Flow TXs
+- FundMerchant: 0xd5ceb3328aa2e7bda44b9673ef78ac7dc864d9c1bff794956c6e9ff44ab5a4a9
+- FundAgent: 0xa15dd757501918e97819ff6909cff1bbfe1026acd3def3fc4ab6d072c2aa6df9
+- FundBuyer: 0xa343b7fbef3c0bed0c344bfcfbba5b4fe1b3f45d62500eb2a48facef1fe4d011
+- MintMerchantIdentity: 0x809a5fd431736aba272fddaff7d8960356946f43690552077952dbe90d754103
+- MintAgentIdentity: 0x07c75c0c83c127f363c26c5ee076f11fc441344c16a2542c6fac97afafafa36d
+- ListProduct: 0xcc3eb504bc1616d18970b92607b3a0674590b37fa4d6679c1210774f3942f093
+- RecordPurchase: 0x9d169b27a2610998cf9357d0847a1dc6ffd267e08440f1b4225a67e15cc22041
+- TransferUSDCToMerchant: 0x8fcf4f767ba3b658923c737ed22b147bd8765834df15ec84d06c33a23889d2a8
+- ApproveEscrow: 0x8ff6fb8bce17756a80e87a6a9fec0f202faea6597a23f1920006d9e35e3bac5f
+- CreateEscrowOrder: 0x74b7415c40640de4133d801145e2e496a30432531b8ec06cbc6774c0f058cf39
+- AcceptEscrowOrder: 0x035fee845b62b32d7eea20f689b43be877f9b69b1b6615dccecf1654869a1d36
+- ReleaseFunds: 0x18f9af278a6817ad266dc9232517de16cd4e958a435ba7d183ee6cdcce9c2b6b
