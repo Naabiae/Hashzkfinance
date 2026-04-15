@@ -37,6 +37,16 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
+  type EthereumProvider = ethers.Eip1193Provider & {
+    on?: (event: string, listener: (...args: unknown[]) => void) => void;
+  };
+
+  const getEthereum = (): EthereumProvider | null => {
+    if (typeof window === "undefined") return null;
+    const w = window as unknown as { ethereum?: EthereumProvider };
+    return w.ethereum ?? null;
+  };
+
   const checkRole = async (userAddress: string, ethersProvider: ethers.BrowserProvider) => {
     try {
       // Mocking the IdentityRegistry ABI just for the getUserRole function
@@ -52,9 +62,10 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const connectWallet = async () => {
-    if (typeof window !== "undefined" && (window as any).ethereum) {
+    const ethereum = getEthereum();
+    if (ethereum) {
       try {
-        const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+        const browserProvider = new ethers.BrowserProvider(ethereum);
         await browserProvider.send("eth_requestAccounts", []);
         const ethersSigner = await browserProvider.getSigner();
         const userAddress = await ethersSigner.getAddress();
@@ -81,8 +92,9 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const init = async () => {
-      if (typeof window !== "undefined" && (window as any).ethereum) {
-        const browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+      const ethereum = getEthereum();
+      if (ethereum) {
+        const browserProvider = new ethers.BrowserProvider(ethereum);
         const accounts = await browserProvider.send("eth_accounts", []);
         if (accounts.length > 0) {
           const ethersSigner = await browserProvider.getSigner();
@@ -97,11 +109,12 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     };
     init();
 
-    if ((window as any).ethereum) {
-      (window as any).ethereum.on('accountsChanged', () => {
+    const ethereum = getEthereum();
+    if (ethereum?.on) {
+      ethereum.on("accountsChanged", () => {
         window.location.reload();
       });
-      (window as any).ethereum.on('chainChanged', () => {
+      ethereum.on("chainChanged", () => {
         window.location.reload();
       });
     }

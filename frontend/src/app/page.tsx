@@ -55,7 +55,7 @@ export default function Storefront() {
             The Decentralized <span className="text-primary">Marketplace</span> for Web3
           </h1>
           <p className="text-xl text-muted mb-8 leading-relaxed">
-            Shop exclusive physical and digital goods directly using HashKey's secure crypto payment gateway. No middlemen, full transparency.
+            Shop exclusive physical and digital goods directly using HashKey&apos;s secure crypto payment gateway. No middlemen, full transparency.
           </p>
           <button className="btn-primary flex items-center space-x-2 text-lg px-8 py-4">
             <ShoppingBag className="w-5 h-5" />

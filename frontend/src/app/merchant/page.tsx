@@ -20,7 +20,7 @@ const USDC_ABI = [
 ];
 
 export default function MerchantDashboard() {
-  const { address, signer, role } = useWeb3();
+  const { signer, role } = useWeb3();
   const [activeTab, setActiveTab] = useState<"inventory" | "escrow">("inventory");
 
   const [form, setForm] = useState({ name: "", price: "", stock: "", image: "" });
